@@ -36,7 +36,8 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
     const [uploadedFiles, setUploadedFiles] = useState<DocumentFile[]>([]);
     
     const [retirementDate, setRetirementDate] = useState('');
-    const [leaveDays, setLeaveDays] = useState<number | ''>(90);
+    const [currentLeaveBalance, setCurrentLeaveBalance] = useState<number | ''>(60);
+    const [desiredTerminalLeaveDays, setDesiredTerminalLeaveDays] = useState<number | ''>(60);
     const [ptdyDays, setPtdyDays] = useState<number | ''>(10);
     const [cspDays, setCspDays] = useState<number | ''>(0);
 
@@ -95,7 +96,8 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
             additionalConsiderations,
             documents: uploadedFiles,
             retirementDate,
-            leaveDays: leaveDays === '' ? undefined : Number(leaveDays),
+            currentLeaveBalance: currentLeaveBalance === '' ? undefined : Number(currentLeaveBalance),
+            desiredTerminalLeaveDays: desiredTerminalLeaveDays === '' ? undefined : Number(desiredTerminalLeaveDays),
             ptdyDays: ptdyDays === '' ? undefined : Number(ptdyDays),
             cspDays: cspDays === '' ? undefined : Number(cspDays),
         };
@@ -201,8 +203,8 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
 
                 <div className="pt-2">
                      <h3 className="text-lg font-semibold text-slate-200 mb-4">Retirement & Leave Details (Optional)</h3>
-                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div>
+                     <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+                        <div className="lg:col-span-1">
                              <label htmlFor="retirementDate" className="block text-sm font-medium text-slate-300 mb-2">Retirement Date</label>
                              <div className="relative">
                                  <CalendarDaysIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
@@ -210,10 +212,17 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
                              </div>
                         </div>
                          <div>
-                             <label htmlFor="leaveDays" className="block text-sm font-medium text-slate-300 mb-2">Terminal Leave Days</label>
+                             <label htmlFor="currentLeaveBalance" className="block text-sm font-medium text-slate-300 mb-2">Current Leave Balance</label>
                              <div className="relative">
                                  <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
-                                 <input type="number" id="leaveDays" value={leaveDays} onChange={e => setLeaveDays(e.target.value === '' ? '' : parseInt(e.target.value, 10))} placeholder="e.g., 90" className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" />
+                                 <input type="number" id="currentLeaveBalance" value={currentLeaveBalance} onChange={e => setCurrentLeaveBalance(e.target.value === '' ? '' : parseInt(e.target.value, 10))} placeholder="e.g., 60" className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" />
+                             </div>
+                        </div>
+                         <div>
+                             <label htmlFor="desiredTerminalLeaveDays" className="block text-sm font-medium text-slate-300 mb-2">Desired Terminal Leave</label>
+                             <div className="relative">
+                                 <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
+                                 <input type="number" id="desiredTerminalLeaveDays" value={desiredTerminalLeaveDays} onChange={e => setDesiredTerminalLeaveDays(e.target.value === '' ? '' : parseInt(e.target.value, 10))} placeholder="e.g., 60" className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" />
                              </div>
                         </div>
                          <div>

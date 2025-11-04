@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { Task, Sprint } from '../types';
+import { ProgressDonutChart } from './ProgressDonutChart';
 import { BoltIcon } from './icons/BoltIcon';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { ChevronRightIcon } from './icons/ChevronRightIcon';
@@ -106,15 +107,19 @@ export const TaskList: React.FC<TaskListProps> = ({ sprints, onStatusChange, onD
         <div className="bg-slate-800/50 border border-slate-700 p-6 rounded-xl shadow-lg h-full flex flex-col">
             <h3 className="text-2xl font-bold text-sky-400 mb-4">Action Sprints</h3>
 
-            <div className="mb-4">
-                <div className="flex justify-between items-center text-sm text-slate-300 mb-1">
-                    <span>Overall Progress</span>
-                    <span>{completedCount} / {totalCount} Tasks Completed</span>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-2.5">
-                    <div className="bg-gradient-to-r from-green-500 to-green-400 h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+            <div className="mb-4 flex items-center gap-4">
+                <ProgressDonutChart progress={progress} />
+                <div className="flex-1">
+                    <div className="flex justify-between items-center text-sm text-slate-300 mb-1">
+                        <span>Overall Progress</span>
+                        <span>{completedCount} / {totalCount} Tasks Completed</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-2.5">
+                        <div className="bg-gradient-to-r from-green-500 to-green-400 h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                    </div>
                 </div>
             </div>
+
 
             <div className="space-y-2">
                 {sprints.map((sprint, index) => (

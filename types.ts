@@ -11,7 +11,8 @@ export interface UserProfile {
   additionalConsiderations?: string;
   documents: DocumentFile[];
   retirementDate?: string;
-  leaveDays?: number;
+  currentLeaveBalance?: number;
+  desiredTerminalLeaveDays?: number;
   ptdyDays?: number;
   cspDays?: number;
 }
@@ -47,10 +48,18 @@ export interface Certification {
     reasoning?: string;
 }
 
+export interface SkillAssessment {
+    skillName: string;
+    currentLevel: number; // Scale of 1-10
+    requiredLevel: number; // Scale of 1-10
+}
+
 export interface CareerTeamFeedback {
     overallImpression: string;
     resumeFeedback: string;
     skillsGapAnalysis: string;
+    skillAssessments: SkillAssessment[];
+    leaveCalculationBreakdown?: string;
 }
 
 export interface CompanyProspect {
@@ -62,8 +71,9 @@ export interface CompanyProspect {
 
 export interface GroundingChunk {
   web?: {
-    uri: string;
-    title: string;
+    // FIX: Made uri and title optional to match the type from @google/genai.
+    uri?: string;
+    title?: string;
   };
 }
 

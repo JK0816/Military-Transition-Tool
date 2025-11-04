@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import type { TransitionPlan, Milestone, Task, Sprint, Certification, CompanyProspect, GroundingChunk } from '../types';
-import { MonthlyActionList } from './MonthlyActionList';
+import { TimelineGanttChart } from './TimelineGanttChart';
 import { TaskList } from './TaskList';
 import { CertificationsTracker } from './CertificationsTracker';
+import { SkillsChart } from './SkillsChart';
 import { ChartBarIcon } from './icons/ChartBarIcon';
 import { BuildingOfficeIcon } from './icons/BuildingOfficeIcon';
 import { DocumentTextIcon } from './icons/DocumentTextIcon';
@@ -124,8 +125,6 @@ ${skillsGapAnalysis}
         'Low': { color: 'bg-red-500/20', textColor: 'text-red-400' },
     };
     
-    const webSources = sources.filter(s => s.web);
-
     return (
         <div className="space-y-8 mt-8">
             <div className="text-center p-6 bg-slate-900/50 border border-sky-500/30 rounded-xl">
@@ -148,7 +147,7 @@ ${skillsGapAnalysis}
                         Export Debrief
                     </button>
                 </div>
-                <div className="space-y-4 text-slate-300">
+                <div className="space-y-6 text-slate-300">
                     <div>
                         <h4 className="font-semibold text-sky-400">Overall Impression</h4>
                         <p>{careerTeamFeedback.overallImpression}</p>
@@ -159,21 +158,14 @@ ${skillsGapAnalysis}
                     </div>
                      <div className="border-t border-slate-700 pt-4">
                         <h4 className="font-semibold text-sky-400">Skills Gap Analysis</h4>
-                        <p>{careerTeamFeedback.skillsGapAnalysis}</p>
+                        <p className="mb-4">{careerTeamFeedback.skillsGapAnalysis}</p>
+                        <SkillsChart assessments={careerTeamFeedback.skillAssessments} />
                     </div>
-                    {webSources.length > 0 && (
+
+                    {careerTeamFeedback.leaveCalculationBreakdown && (
                         <div className="border-t border-slate-700 pt-4">
-                            <h4 className="font-semibold text-sky-400 mb-2">Sources</h4>
-                            <ul className="space-y-1">
-                                {webSources.map((source, index) => (
-                                    <li key={index} className="flex items-center text-sm">
-                                        <LinkIcon className="h-4 w-4 mr-2 text-slate-500 flex-shrink-0" />
-                                        <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 truncate" title={source.web.title}>
-                                            {source.web.title || source.web.uri}
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
+                            <h4 className="font-semibold text-sky-400">Leave Calculation Breakdown (per AR 600-8-10)</h4>
+                            <pre className="text-sm text-slate-400 bg-slate-900/50 p-3 mt-2 rounded-md whitespace-pre-wrap font-mono">{careerTeamFeedback.leaveCalculationBreakdown}</pre>
                         </div>
                     )}
                 </div>
@@ -220,7 +212,7 @@ ${skillsGapAnalysis}
 
             <div className="grid lg:grid-cols-5 gap-6">
                  <div className="lg:col-span-3">
-                    <MonthlyActionList milestones={editablePlan.milestones} onUpdateMilestone={handleUpdateMilestone} />
+                    <TimelineGanttChart milestones={editablePlan.milestones} onUpdateMilestone={handleUpdateMilestone} />
                 </div>
                 <div className="lg:col-span-2 space-y-6">
                     <CertificationsTracker certifications={editablePlan.certifications} onStatusChange={handleCertificationStatusChange} />
