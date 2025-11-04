@@ -10,6 +10,10 @@ export interface UserProfile {
   targetLocations?: string;
   additionalConsiderations?: string;
   documents: DocumentFile[];
+  retirementDate?: string;
+  leaveDays?: number;
+  ptdyDays?: number;
+  cspDays?: number;
 }
 
 export interface Task {
@@ -38,6 +42,9 @@ export interface Certification {
     id: number;
     name: string;
     status: 'Recommended' | 'In Progress' | 'Completed';
+    courseProvider?: string;
+    courseUrl?: string;
+    reasoning?: string;
 }
 
 export interface CareerTeamFeedback {
@@ -51,6 +58,13 @@ export interface CompanyProspect {
     probability: 'High' | 'Medium' | 'Low';
     compensationRange: string;
     targetLevel: string;
+}
+
+export interface GroundingChunk {
+  web?: {
+    uri: string;
+    title: string;
+  };
 }
 
 export interface TransitionPlan {

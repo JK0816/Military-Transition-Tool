@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { ProfileUploader } from './components/ProfileUploader';
 import { PlanDisplay } from './components/PlanDisplay';
-import type { TransitionPlan, UserProfile } from './types';
+import type { TransitionPlan, UserProfile, GroundingChunk } from './types';
 import { generateTransitionPlan } from './services/geminiService';
 
 const App: React.FC = () => {
     const [plan, setPlan] = useState<TransitionPlan | null>(null);
+    const [sources, setSources] = useState<GroundingChunk[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -14,10 +15,12 @@ const App: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setPlan(null);
+        setSources([]);
 
         try {
-            const generatedPlan = await generateTransitionPlan(profile);
+            const { plan: generatedPlan, sources: generatedSources } = await generateTransitionPlan(profile);
             setPlan(generatedPlan);
+            setSources(generatedSources);
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message);
@@ -43,7 +46,7 @@ const App: React.FC = () => {
                 )}
 
                 {plan && !isLoading && (
-                    <PlanDisplay plan={plan} />
+                    <PlanDisplay plan={plan} sources={sources} />
                 )}
 
                 {!plan && !isLoading && !error && (

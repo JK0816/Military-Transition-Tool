@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { TransitionPlan, Milestone, Task, Sprint, Certification, CompanyProspect } from '../types';
+import type { TransitionPlan, Milestone, Task, Sprint, Certification, CompanyProspect, GroundingChunk } from '../types';
 import { MonthlyActionList } from './MonthlyActionList';
 import { TaskList } from './TaskList';
 import { CertificationsTracker } from './CertificationsTracker';
@@ -11,9 +11,11 @@ import { ThumbUpIcon } from './icons/ThumbUpIcon';
 import { ThumbDownIcon } from './icons/ThumbDownIcon';
 import { BuildingStorefrontIcon } from './icons/BuildingStorefrontIcon';
 import { ArrowDownTrayIcon } from './icons/ArrowDownTrayIcon';
+import { LinkIcon } from './icons/LinkIcon';
 
 interface PlanDisplayProps {
     plan: TransitionPlan;
+    sources: GroundingChunk[];
 }
 
 const SectionCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
@@ -27,7 +29,7 @@ const SectionCard: React.FC<{ title: string; icon: React.ReactNode; children: Re
 );
 
 
-export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan }) => {
+export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, sources }) => {
     const [editablePlan, setEditablePlan] = useState<TransitionPlan>(plan);
     const [feedbackSelection, setFeedbackSelection] = useState<'good' | 'bad' | null>(null);
     const [feedbackText, setFeedbackText] = useState('');
@@ -121,6 +123,8 @@ ${skillsGapAnalysis}
         'Medium': { color: 'bg-yellow-500/20', textColor: 'text-yellow-400' },
         'Low': { color: 'bg-red-500/20', textColor: 'text-red-400' },
     };
+    
+    const webSources = sources.filter(s => s.web);
 
     return (
         <div className="space-y-8 mt-8">
@@ -157,6 +161,21 @@ ${skillsGapAnalysis}
                         <h4 className="font-semibold text-sky-400">Skills Gap Analysis</h4>
                         <p>{careerTeamFeedback.skillsGapAnalysis}</p>
                     </div>
+                    {webSources.length > 0 && (
+                        <div className="border-t border-slate-700 pt-4">
+                            <h4 className="font-semibold text-sky-400 mb-2">Sources</h4>
+                            <ul className="space-y-1">
+                                {webSources.map((source, index) => (
+                                    <li key={index} className="flex items-center text-sm">
+                                        <LinkIcon className="h-4 w-4 mr-2 text-slate-500 flex-shrink-0" />
+                                        <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 truncate" title={source.web.title}>
+                                            {source.web.title || source.web.uri}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             </div>
             
