@@ -1,0 +1,5 @@
+{
+  "name": "Military Career Transition Planner",
+  "description": "An AI-powered career transition tool for active duty military members. It provides a comprehensive plan by leveraging an AI advisory team to analyze user documents, set goals, recommend training, create a timeline, and track progress.",
+  "requestFramePermissions": []
+}
