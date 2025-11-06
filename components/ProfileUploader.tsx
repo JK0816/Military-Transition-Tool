@@ -11,11 +11,19 @@ import { InformationCircleIcon } from './icons/InformationCircleIcon';
 import { CalendarDaysIcon } from './icons/CalendarDaysIcon';
 import { ClockIcon } from './icons/ClockIcon';
 
-
 interface ProfileUploaderProps {
     onGeneratePlan: (profile: UserProfile) => void;
     isLoading: boolean;
 }
+
+type FormErrors = {
+    targetRole?: string;
+    documents?: string;
+    retirementDate?: string;
+    currentLeaveBalance?: string;
+    ptdyDays?: string;
+    cspDays?: string;
+};
 
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -37,11 +45,11 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
     
     const [retirementDate, setRetirementDate] = useState('');
     const [currentLeaveBalance, setCurrentLeaveBalance] = useState<number | ''>(60);
-    const [desiredTerminalLeaveDays, setDesiredTerminalLeaveDays] = useState<number | ''>(60);
     const [ptdyDays, setPtdyDays] = useState<number | ''>(10);
     const [cspDays, setCspDays] = useState<number | ''>(0);
 
     const [isDragging, setIsDragging] = useState(false);
+    const [formErrors, setFormErrors] = useState<FormErrors>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = async (files: FileList | null) => {
@@ -59,8 +67,10 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
                     })
                 );
                 setUploadedFiles(prevFiles => [...prevFiles, ...newFiles]);
+                setFormErrors(prev => ({...prev, documents: undefined }));
             } catch (error) {
                 console.error("Error converting files to base64:", error);
+                 setFormErrors(prev => ({...prev, documents: "There was an error processing your files." }));
             }
         }
     };
@@ -88,8 +98,35 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
         handleFileChange(e.dataTransfer.files);
     };
 
+    const validateForm = (): boolean => {
+        const errors: FormErrors = {};
+        if (!targetRole.trim()) {
+            errors.targetRole = 'Target role is required.';
+        }
+        if (uploadedFiles.length === 0) {
+            errors.documents = 'At least one document is required.';
+        }
+        if (retirementDate && new Date(retirementDate) < new Date(new Date().toDateString())) {
+            errors.retirementDate = 'Retirement date cannot be in the past.';
+        }
+        if (currentLeaveBalance !== '' && Number(currentLeaveBalance) < 0) {
+            errors.currentLeaveBalance = 'Leave balance cannot be negative.';
+        }
+         if (ptdyDays !== '' && Number(ptdyDays) < 0) {
+            errors.ptdyDays = 'PTDY days cannot be negative.';
+        }
+         if (cspDays !== '' && Number(cspDays) < 0) {
+            errors.cspDays = 'CSP days cannot be negative.';
+        }
+
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateForm()) return;
+
         const userProfile: UserProfile = {
             targetRole,
             targetLocations,
@@ -97,54 +134,54 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
             documents: uploadedFiles,
             retirementDate,
             currentLeaveBalance: currentLeaveBalance === '' ? undefined : Number(currentLeaveBalance),
-            desiredTerminalLeaveDays: desiredTerminalLeaveDays === '' ? undefined : Number(desiredTerminalLeaveDays),
             ptdyDays: ptdyDays === '' ? undefined : Number(ptdyDays),
             cspDays: cspDays === '' ? undefined : Number(cspDays),
         };
         onGeneratePlan(userProfile);
     };
 
-    const isFormValid = targetRole.trim() !== '' && uploadedFiles.length > 0;
-
     return (
-        <div className="bg-slate-800/50 border border-slate-700 p-6 md:p-8 rounded-xl shadow-lg">
-            <div className="flex items-center mb-6">
-                <SparklesIcon className="h-8 w-8 text-sky-400 mr-3" />
-                <h2 className="text-2xl md:text-3xl font-bold text-white">Create Your Transition Plan</h2>
+        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-6 md:p-8 rounded-2xl shadow-2xl">
+            <div className="text-center mb-8">
+                <SparklesIcon className="h-10 w-10 text-sky-400 mx-auto mb-3" />
+                <h2 className="text-2xl md:text-3xl font-bold text-white">Create Your Transition Blueprint</h2>
+                <p className="text-slate-400 mt-2 max-w-2xl mx-auto">
+                    Enter your goals, upload your professional documents, and let our AI generate a personalized, step-by-step plan for your career move.
+                </p>
             </div>
-            <p className="text-slate-400 mb-6">
-                Enter your goals and timeline, then upload your professional documents (resume, performance reviews). Our AI will generate a personalized, step-by-step blueprint for your career move.
-            </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-6 border-b border-slate-700 pb-6">
+                <div className="space-y-6 border-b border-slate-700 pb-8">
                     <div className="grid md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="targetRole" className="block text-sm font-medium text-slate-300 mb-2">Target Role(s)</label>
                             <div className="relative">
-                                <BriefcaseIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
+                                <BriefcaseIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3.5 transform -translate-y-1/2" />
                                 <input
                                     type="text"
                                     id="targetRole"
                                     value={targetRole}
-                                    onChange={(e) => setTargetRole(e.target.value)}
+                                    onChange={(e) => { setTargetRole(e.target.value); setFormErrors(p => ({...p, targetRole: undefined})) }}
                                     placeholder="e.g., Software Engineer, Product Manager"
-                                    className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                                    className={`w-full bg-slate-900/70 border rounded-lg py-2.5 pl-11 pr-4 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-300 shadow-sm ${formErrors.targetRole ? 'border-red-500' : 'border-slate-700'}`}
                                     required
+                                    aria-invalid={!!formErrors.targetRole}
+                                    aria-describedby={formErrors.targetRole ? "targetRole-error" : undefined}
                                 />
                             </div>
+                            {formErrors.targetRole && <p id="targetRole-error" className="mt-2 text-sm text-red-400">{formErrors.targetRole}</p>}
                         </div>
                         <div>
                             <label htmlFor="targetLocations" className="block text-sm font-medium text-slate-300 mb-2">Target Geographic Areas (Optional)</label>
                             <div className="relative">
-                                <MapPinIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
+                                <MapPinIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3.5 transform -translate-y-1/2" />
                                 <input
                                     type="text"
                                     id="targetLocations"
                                     value={targetLocations}
                                     onChange={(e) => setTargetLocations(e.target.value)}
                                     placeholder="e.g., Austin, TX; Remote"
-                                    className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                                    className="w-full bg-slate-900/70 border border-slate-700 rounded-lg py-2.5 pl-11 pr-4 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-300 shadow-sm"
                                 />
                             </div>
                         </div>
@@ -156,32 +193,34 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
                             ref={fileInputRef}
                             onChange={(e) => handleFileChange(e.target.files)}
                             className="hidden"
-                            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                            accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.jpg,.jpeg,.png"
                             multiple
                         />
                          <div
-                            className={`flex justify-center items-center w-full px-6 py-10 border-2 border-dashed rounded-md cursor-pointer transition-colors ${isDragging ? 'border-sky-500 bg-sky-900/20' : 'border-slate-600 hover:border-sky-500 hover:bg-slate-800'}`}
+                            className={`flex justify-center items-center w-full px-6 py-10 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-300 ${isDragging ? 'border-sky-500 bg-sky-900/20 scale-105' : formErrors.documents ? 'border-red-500' : 'border-slate-600 hover:border-sky-500 hover:bg-slate-800/60'}`}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                             onClick={() => fileInputRef.current?.click()}
+                            aria-describedby={formErrors.documents ? "documents-error" : undefined}
                         >
                             <div className="text-center">
                                 <UploadIcon className="mx-auto h-10 w-10 text-slate-500" />
                                 <p className="mt-2 text-sm text-slate-400">
                                     <span className="font-semibold text-sky-400">Click to upload</span> or drag and drop
                                 </p>
-                                <p className="text-xs text-slate-500">PDF, DOCX, TXT, JPG, PNG, etc.</p>
+                                <p className="text-xs text-slate-500">PDF, DOCX, TXT, RTF, ODT, images, etc.</p>
                             </div>
                         </div>
+                        {formErrors.documents && <p id="documents-error" className="mt-2 text-sm text-red-400">{formErrors.documents}</p>}
                         
                         {uploadedFiles.length > 0 && (
-                           <div className="mt-4 space-y-2">
+                           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                {uploadedFiles.map((file) => (
-                                   <div key={file.fileName} className="bg-slate-900 border border-slate-700 rounded-md p-2 flex items-center justify-between text-sm">
+                                   <div key={file.fileName} className="bg-slate-900/80 border border-slate-700 rounded-lg p-2.5 flex items-center justify-between text-sm">
                                        <div className="flex items-center overflow-hidden">
-                                           <DocumentTextIcon className="h-5 w-5 text-sky-400 flex-shrink-0" />
-                                           <div className="ml-2 overflow-hidden">
+                                           <DocumentTextIcon className="h-6 w-6 text-sky-400 flex-shrink-0" />
+                                           <div className="ml-3 overflow-hidden">
                                                <p className="font-medium text-white truncate">{file.fileName}</p>
                                                <p className="text-xs text-slate-400">Uploaded on {new Date(file.uploadDate).toLocaleDateString()}</p>
                                            </div>
@@ -189,7 +228,7 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
                                        <button
                                            type="button"
                                            onClick={() => handleRemoveFile(file.fileName)}
-                                           className="ml-2 p-1 text-slate-500 hover:text-white rounded-full hover:bg-slate-700 transition-colors"
+                                           className="ml-2 p-1 text-slate-500 hover:text-white rounded-full hover:bg-slate-700 transition-colors flex-shrink-0"
                                            aria-label={`Remove ${file.fileName}`}
                                        >
                                            <XCircleIcon className="h-5 w-5" />
@@ -202,42 +241,47 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
                 </div>
 
                 <div className="pt-2">
-                     <h3 className="text-lg font-semibold text-slate-200 mb-4">Retirement & Leave Details (Optional)</h3>
-                     <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        <div className="lg:col-span-1">
+                     <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-semibold text-slate-200">Retirement & Leave Details</h3>
+                        <div className="relative group ml-2">
+                            <InformationCircleIcon className="h-5 w-5 text-slate-500" />
+                            <div className="absolute bottom-full mb-2 w-64 bg-slate-900 text-slate-300 text-xs rounded-lg p-3 border border-slate-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                Providing these details allows the AI to calculate your terminal leave and generate a highly accurate, reverse-engineered timeline.
+                            </div>
+                        </div>
+                     </div>
+                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="md:col-span-2 lg:col-span-1">
                              <label htmlFor="retirementDate" className="block text-sm font-medium text-slate-300 mb-2">Retirement Date</label>
                              <div className="relative">
-                                 <CalendarDaysIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
-                                 <input type="date" id="retirementDate" value={retirementDate} onChange={e => setRetirementDate(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" style={{colorScheme: 'dark'}} />
+                                 <CalendarDaysIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3.5 transform -translate-y-1/2" />
+                                 <input type="date" id="retirementDate" value={retirementDate} onChange={e => { setRetirementDate(e.target.value); setFormErrors(p => ({...p, retirementDate: undefined})) }} min={new Date().toISOString().split('T')[0]} className={`w-full bg-slate-900/70 border rounded-lg py-2.5 pl-11 pr-4 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-300 shadow-sm ${formErrors.retirementDate ? 'border-red-500' : 'border-slate-700'}`} style={{colorScheme: 'dark'}} />
                              </div>
+                             {formErrors.retirementDate && <p className="mt-2 text-sm text-red-400">{formErrors.retirementDate}</p>}
                         </div>
                          <div>
-                             <label htmlFor="currentLeaveBalance" className="block text-sm font-medium text-slate-300 mb-2">Current Leave Balance</label>
+                             <label htmlFor="currentLeaveBalance" className="block text-sm font-medium text-slate-300 mb-2">Current Leave</label>
                              <div className="relative">
-                                 <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
-                                 <input type="number" id="currentLeaveBalance" value={currentLeaveBalance} onChange={e => setCurrentLeaveBalance(e.target.value === '' ? '' : parseInt(e.target.value, 10))} placeholder="e.g., 60" className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" />
+                                 <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3.5 transform -translate-y-1/2" />
+                                 <input type="number" id="currentLeaveBalance" value={currentLeaveBalance} onChange={e => {setCurrentLeaveBalance(e.target.value === '' ? '' : parseInt(e.target.value, 10)); setFormErrors(p => ({...p, currentLeaveBalance: undefined}))}} placeholder="e.g., 60" min="0" className={`w-full bg-slate-900/70 border rounded-lg py-2.5 pl-11 pr-4 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-300 shadow-sm ${formErrors.currentLeaveBalance ? 'border-red-500' : 'border-slate-700'}`} />
                              </div>
-                        </div>
-                         <div>
-                             <label htmlFor="desiredTerminalLeaveDays" className="block text-sm font-medium text-slate-300 mb-2">Desired Terminal Leave</label>
-                             <div className="relative">
-                                 <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
-                                 <input type="number" id="desiredTerminalLeaveDays" value={desiredTerminalLeaveDays} onChange={e => setDesiredTerminalLeaveDays(e.target.value === '' ? '' : parseInt(e.target.value, 10))} placeholder="e.g., 60" className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" />
-                             </div>
+                              {formErrors.currentLeaveBalance && <p className="mt-2 text-sm text-red-400">{formErrors.currentLeaveBalance}</p>}
                         </div>
                          <div>
                              <label htmlFor="ptdyDays" className="block text-sm font-medium text-slate-300 mb-2">PTDY Days</label>
                              <div className="relative">
-                                 <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
-                                 <input type="number" id="ptdyDays" value={ptdyDays} onChange={e => setPtdyDays(e.target.value === '' ? '' : parseInt(e.target.value, 10))} placeholder="e.g., 10" className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" />
+                                 <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3.5 transform -translate-y-1/2" />
+                                 <input type="number" id="ptdyDays" value={ptdyDays} onChange={e => {setPtdyDays(e.target.value === '' ? '' : parseInt(e.target.value, 10)); setFormErrors(p => ({...p, ptdyDays: undefined}))}} placeholder="e.g., 10" min="0" className={`w-full bg-slate-900/70 border rounded-lg py-2.5 pl-11 pr-4 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-300 shadow-sm ${formErrors.ptdyDays ? 'border-red-500' : 'border-slate-700'}`} />
                              </div>
+                             {formErrors.ptdyDays && <p className="mt-2 text-sm text-red-400">{formErrors.ptdyDays}</p>}
                         </div>
                          <div>
                              <label htmlFor="cspDays" className="block text-sm font-medium text-slate-300 mb-2">CSP Days</label>
                              <div className="relative">
-                                 <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3 transform -translate-y-1/2" />
-                                 <input type="number" id="cspDays" value={cspDays} onChange={e => setCspDays(e.target.value === '' ? '' : parseInt(e.target.value, 10))} placeholder="e.g., 120" className="w-full bg-slate-900 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" />
+                                 <ClockIcon className="h-5 w-5 text-slate-500 absolute top-1/2 left-3.5 transform -translate-y-1/2" />
+                                 <input type="number" id="cspDays" value={cspDays} onChange={e => {setCspDays(e.target.value === '' ? '' : parseInt(e.target.value, 10)); setFormErrors(p => ({...p, cspDays: undefined}))}} placeholder="e.g., 120" min="0" className={`w-full bg-slate-900/70 border rounded-lg py-2.5 pl-11 pr-4 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-300 shadow-sm ${formErrors.cspDays ? 'border-red-500' : 'border-slate-700'}`} />
                              </div>
+                             {formErrors.cspDays && <p className="mt-2 text-sm text-red-400">{formErrors.cspDays}</p>}
                         </div>
                      </div>
                 </div>
@@ -253,24 +297,24 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onGeneratePlan
                         value={additionalConsiderations}
                         onChange={(e) => setAdditionalConsiderations(e.target.value)}
                         placeholder="Mention any specific goals, constraints, or other factors for the AI to consider (e.g., desire for remote work, specific companies of interest, personal projects not on resume)..."
-                        className="w-full bg-slate-900 border border-slate-600 rounded-md py-3 px-4 text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                        className="w-full bg-slate-900/70 border border-slate-700 rounded-lg py-3 px-4 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-300 shadow-sm"
                     />
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end pt-4">
                     <button
                         type="submit"
-                        disabled={!isFormValid || isLoading}
-                        className="flex items-center justify-center px-6 py-3 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-500"
+                        disabled={isLoading}
+                        className="flex items-center justify-center px-8 py-3 bg-gradient-to-r from-sky-600 to-cyan-500 text-white font-semibold rounded-lg hover:shadow-glow-sky disabled:from-slate-600 disabled:to-slate-600 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-400"
                     >
                         {isLoading ? (
                             <>
-                                <SpinnerIcon className="h-5 w-5 mr-2" />
-                                Generating...
+                                <SpinnerIcon className="h-5 w-5 mr-2.5" />
+                                Generating Blueprint...
                             </>
                         ) : (
                             <>
-                                <SparklesIcon className="h-5 w-5 mr-2" />
+                                <SparklesIcon className="h-5 w-5 mr-2.5" />
                                 Generate Blueprint
                             </>
                         )}

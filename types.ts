@@ -12,9 +12,14 @@ export interface UserProfile {
   documents: DocumentFile[];
   retirementDate?: string;
   currentLeaveBalance?: number;
-  desiredTerminalLeaveDays?: number;
   ptdyDays?: number;
   cspDays?: number;
+}
+
+// FIX: Added missing ChatMessage type for the AdvisoryChat component.
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
 }
 
 export interface Task {
@@ -25,18 +30,22 @@ export interface Task {
     dueDate?: string; // YYYY-MM-DD
 }
 
-export interface Sprint {
+export interface Phase {
+    id: string;
     title: string;
-    dateRange: string;
+    startDate: string; // YYYY-MM-DD
+    endDate: string; // YYYY-MM-DD
+    objective: string;
     tasks: Task[];
+    recommendedCourseIds: number[];
 }
 
-export interface Milestone {
+export interface RecommendedCourse {
     id: number;
-    date: string; // YYYY-MM-DD
-    title: string;
-    description: string;
-    type: 'Skill Development' | 'Networking' | 'Application' | 'Project Work' | 'Personal Branding';
+    courseName: string;
+    provider: string;
+    url: string;
+    reasoning: string;
 }
 
 export interface Certification {
@@ -60,18 +69,20 @@ export interface CareerTeamFeedback {
     skillsGapAnalysis: string;
     skillAssessments: SkillAssessment[];
     leaveCalculationBreakdown?: string;
+    calculatedTerminalLeaveDays?: number;
 }
 
 export interface CompanyProspect {
+    id: string;
     companyName: string;
     probability: 'High' | 'Medium' | 'Low';
     compensationRange: string;
     targetLevel: string;
+    reasoning: string;
 }
 
 export interface GroundingChunk {
   web?: {
-    // FIX: Made uri and title optional to match the type from @google/genai.
     uri?: string;
     title?: string;
   };
@@ -83,8 +94,9 @@ export interface TransitionPlan {
     skillsToDevelop: string[];
     networkingSuggestions: string[];
     projectIdeas: string[];
-    milestones: Milestone[];
-    sprints: Sprint[];
+    phases: Phase[];
     certifications: Certification[];
+    recommendedCourses: RecommendedCourse[];
     companyProspects: CompanyProspect[];
+    groundingSources?: GroundingChunk[];
 }
