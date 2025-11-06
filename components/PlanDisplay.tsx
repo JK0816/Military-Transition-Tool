@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { TransitionPlan, Task, Phase, Certification, CompanyProspect, UserProfile } from '../types';
+import type { TransitionPlan, Task, Phase, Certification, CompanyProspect, UserProfile, ChatMessage } from '../types';
 import { ActionableTimeline } from './ActionableTimeline';
 import { TaskList } from './TaskList';
 import { CertificationsTracker } from './CertificationsTracker';
@@ -19,6 +19,8 @@ import { RecommendedCourses } from './RecommendedCourses';
 import { CodeBracketIcon } from './icons/CodeBracketIcon';
 import { AdvisoryTeam } from './AdvisoryTeam';
 import { KeyMetrics } from './KeyMetrics';
+import { AdvisoryChat } from './AdvisoryChat';
+import { ChatBubbleLeftRightIcon } from './icons/ChatBubbleLeftRightIcon';
 
 
 type SimpleListType = 'skillsToDevelop' | 'networkingSuggestions' | 'projectIdeas';
@@ -36,6 +38,11 @@ interface PlanDisplayProps {
     onDeleteTask: (taskId: number) => void;
     onDeleteCertification: (certId: number) => void;
     onDeleteSimpleListItem: (listType: SimpleListType, itemIndex: number) => void;
+    // Chat Props
+    onSendMessage: (message: string) => void;
+    chatHistory: ChatMessage[];
+    isChatResponding: boolean;
+    streamingChatResponse: string;
 }
 
 
@@ -115,6 +122,7 @@ const PlanOverview: React.FC<{ plan: TransitionPlan; userProfile: UserProfile }>
 export const PlanDisplay: React.FC<PlanDisplayProps> = (props) => {
     const { plan, userProfile, onAddSimpleListItem, onDeleteSimpleListItem } = props;
     const [activeTab, setActiveTab] = useState<ActiveTab>('blueprint');
+    const [isChatOpen, setIsChatOpen] = useState(false);
     
     const renderContent = () => {
         if (!userProfile) return null;
@@ -143,7 +151,7 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = (props) => {
                                 phases={plan.phases}
                                 recommendedCourses={plan.recommendedCourses}
                                 onTaskStatusChange={props.onTaskStatusChange}
-                                onDueDateChange={props.onTaskDueDateChange}
+                                onTaskDueDateChange={props.onTaskDueDateChange}
                                 onDeleteTask={props.onDeleteTask}
                             />
                              <RecommendedCourses courses={plan.recommendedCourses} />
@@ -229,6 +237,29 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = (props) => {
                 </button>
             </div>
             {renderContent()}
+
+            {/* Floating Chat Button & Modal */}
+            <button
+                onClick={() => setIsChatOpen(true)}
+                className="no-print fixed bottom-24 right-6 bg-gradient-to-r from-indigo-600 to-purple-500 text-white p-3 rounded-full shadow-lg hover:shadow-glow-purple transition-all duration-300 z-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-indigo-400"
+                aria-label="Open AI Advisor Chat"
+            >
+                <ChatBubbleLeftRightIcon className="h-7 w-7" />
+            </button>
+            
+            {isChatOpen && (
+                <div className="no-print fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[60] animate-fade-in" onClick={() => setIsChatOpen(false)}>
+                     <div className="w-full max-w-2xl m-4" onClick={(e) => e.stopPropagation()}>
+                        <AdvisoryChat
+                            history={props.chatHistory}
+                            onSendMessage={props.onSendMessage}
+                            isResponding={props.isChatResponding}
+                            streamingResponse={props.streamingChatResponse}
+                        />
+                     </div>
+                </div>
+            )}
+
             <div className="printable-area hidden">
                  <ResumeBuilder plan={plan} userProfile={userProfile!} />
             </div>

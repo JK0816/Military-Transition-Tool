@@ -16,7 +16,6 @@ export interface UserProfile {
   cspDays?: number;
 }
 
-// FIX: Added missing ChatMessage type for the AdvisoryChat component.
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
@@ -63,6 +62,14 @@ export interface SkillAssessment {
     requiredLevel: number; // Scale of 1-10
 }
 
+export interface AiGeneratedResumeExperience {
+  title: string;
+  company: string;
+  location: string;
+  dates: string;
+  description: string;
+}
+
 export interface CareerTeamFeedback {
     overallImpression: string;
     resumeFeedback: string;
@@ -70,6 +77,7 @@ export interface CareerTeamFeedback {
     skillAssessments: SkillAssessment[];
     leaveCalculationBreakdown?: string;
     calculatedTerminalLeaveDays?: number;
+    suggestedResumeExperience?: AiGeneratedResumeExperience[];
 }
 
 export interface CompanyProspect {

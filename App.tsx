@@ -3,8 +3,8 @@ import { Header } from './components/Header';
 import { ProfileUploader } from './components/ProfileUploader';
 import { PlanDisplay } from './components/PlanDisplay';
 import { LoadingIndicator } from './components/LoadingIndicator';
-import type { TransitionPlan, UserProfile, Task, Certification } from './types';
-import { generateTransitionPlan } from './services/geminiService';
+import type { TransitionPlan, UserProfile, Task, Certification, ChatMessage } from './types';
+import { generateTransitionPlan, startChatSession, continueChatStream } from './services/geminiService';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { Toast } from './components/Toast';
 
@@ -149,6 +149,11 @@ const App: React.FC = () => {
     const [hasSavedPlan, setHasSavedPlan] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '' });
 
+    // Chat State
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [isChatResponding, setIsChatResponding] = useState(false);
+    const [streamingChatResponse, setStreamingChatResponse] = useState('');
+
     const LOCAL_STORAGE_KEY = 'transitionPlan';
     const USER_PROFILE_KEY = 'userProfile';
 
@@ -172,6 +177,7 @@ const App: React.FC = () => {
         dispatch({ type: 'SET_PLAN', payload: null! });
         setStreamedContent('');
         setUserProfile(profile);
+        setChatHistory([]); // Reset chat history for a new plan
         localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
 
         try {
@@ -179,6 +185,7 @@ const App: React.FC = () => {
                 setStreamedContent(text);
             });
             dispatch({ type: 'SET_PLAN', payload: generatedPlan });
+            startChatSession(profile, generatedPlan);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(generatedPlan));
             setHasSavedPlan(true);
         } catch (err) {
@@ -204,6 +211,8 @@ const App: React.FC = () => {
                 if (isValidPlan(savedPlan) && isValidProfile(savedProfile)) {
                     dispatch({ type: 'SET_PLAN', payload: savedPlan });
                     setUserProfile(savedProfile);
+                    startChatSession(savedProfile, savedPlan);
+                    setChatHistory([]); // Reset chat display on load
                     setError(null);
                 } else {
                     throw new Error("Saved data is corrupted or from an older version of the app.");
@@ -225,17 +234,40 @@ const App: React.FC = () => {
         setUserProfile(null);
         setError(null);
         setStreamedContent('');
+        setChatHistory([]);
         localStorage.removeItem(LOCAL_STORAGE_KEY);
         localStorage.removeItem(USER_PROFILE_KEY);
         setHasSavedPlan(false);
     };
-    
-    const handleUpdatePlan = (updatedPlan: TransitionPlan) => {
-        dispatch({ type: 'SET_PLAN', payload: updatedPlan });
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlan));
-        showToast('Changes saved!');
-    };
 
+    const handleSendMessage = async (message: string) => {
+        const userMessage: ChatMessage = { role: 'user', text: message };
+        setChatHistory(prev => [...prev, userMessage]);
+        setIsChatResponding(true);
+        setStreamingChatResponse('');
+    
+        try {
+            const stream = await continueChatStream(message);
+            let fullResponse = '';
+            for await (const chunk of stream) {
+                const chunkText = chunk.text;
+                if (chunkText) {
+                    fullResponse += chunkText;
+                    setStreamingChatResponse(fullResponse);
+                }
+            }
+            const modelMessage: ChatMessage = { role: 'model', text: fullResponse };
+            setChatHistory(prev => [...prev, modelMessage]);
+        } catch (err) {
+            const errorMessage: ChatMessage = { role: 'model', text: "Sorry, I encountered an error. Please try again." };
+            setChatHistory(prev => [...prev, errorMessage]);
+            console.error("Chat error:", err);
+        } finally {
+            setIsChatResponding(false);
+            setStreamingChatResponse('');
+        }
+    };
+    
     // The reducer updates the state, and this effect saves it.
     useEffect(() => {
         if (plan) {
@@ -271,6 +303,11 @@ const App: React.FC = () => {
                         onDeleteTask={(taskId) => dispatch({ type: 'DELETE_TASK', payload: { taskId } })}
                         onDeleteCertification={(certId) => dispatch({ type: 'DELETE_CERTIFICATION', payload: { certId } })}
                         onDeleteSimpleListItem={(listType, itemIndex) => dispatch({ type: 'DELETE_SIMPLE_LIST_ITEM', payload: { listType, itemIndex } })}
+                        // Chat Props
+                        onSendMessage={handleSendMessage}
+                        chatHistory={chatHistory}
+                        isChatResponding={isChatResponding}
+                        streamingChatResponse={streamingChatResponse}
                     />
                 ) : (
                     <div className="max-w-4xl mx-auto">

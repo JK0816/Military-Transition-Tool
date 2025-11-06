@@ -1,5 +1,5 @@
-import { GoogleGenAI, Type, Part } from "@google/genai";
-import type { TransitionPlan, UserProfile, Task, Phase, Certification, CompanyProspect, CareerTeamFeedback, GroundingChunk, RecommendedCourse, SkillAssessment } from '../types';
+import { GoogleGenAI, Type, Part, Chat } from "@google/genai";
+import type { TransitionPlan, UserProfile, Task, Phase, Certification, CompanyProspect, CareerTeamFeedback, GroundingChunk, RecommendedCourse, SkillAssessment, AiGeneratedResumeExperience } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -38,7 +38,7 @@ type AIParsedCourse = Omit<RecommendedCourse, 'id'> & { id: number }; // AI now 
 
 interface AIParsedPlan {
     summary?: string;
-    careerTeamFeedback?: Partial<CareerTeamFeedback>;
+    careerTeamFeedback?: Partial<CareerTeamFeedback> & { suggestedResumeExperience?: AiGeneratedResumeExperience[] };
     skillsToDevelop?: unknown[];
     networkingSuggestions?: unknown[];
     projectIdeas?: unknown[];
@@ -53,6 +53,7 @@ interface AIParsedPlan {
     skillAssessments?: SkillAssessment[];
     leaveCalculationBreakdown?: string;
     calculatedTerminalLeaveDays?: number;
+    suggestedResumeExperience?: AiGeneratedResumeExperience[];
 }
 
 
@@ -111,6 +112,7 @@ const transformAndValidatePlan = (parsedPlan: AIParsedPlan, groundingChunks: Gro
         skillAssessments: feedbackSource.skillAssessments ?? [],
         leaveCalculationBreakdown: feedbackSource.leaveCalculationBreakdown,
         calculatedTerminalLeaveDays: feedbackSource.calculatedTerminalLeaveDays,
+        suggestedResumeExperience: feedbackSource.suggestedResumeExperience ?? [],
     };
     
     // Create a unique set of sources to avoid duplicates
@@ -153,10 +155,11 @@ const systemInstruction = `
       "careerTeamFeedback": {
         "calculatedTerminalLeaveDays": "number",
         "leaveCalculationBreakdown": "Mandatory. A multi-line string explaining the leave calculation, including terminal leave.",
-        "overallImpression": "An overall impression of the candidate's profile.",
-        "resumeFeedback": "Specific, actionable feedback on their resume.",
+        "overallImpression": "An overall impression of the candidate's profile for the target role.",
+        "resumeFeedback": "General, actionable feedback on their resume that complements the generated experience section.",
         "skillsGapAnalysis": "Critical skill gaps between their current profile and the target role.",
-        "skillAssessments": "[{\"skillName\": \"string\", \"currentLevel\": number(1-10), \"requiredLevel\": number(1-10)}]"
+        "skillAssessments": "[{\"skillName\": \"string\", \"currentLevel\": number(1-10), \"requiredLevel\": number(1-10)}]",
+        "suggestedResumeExperience": "[{\"title\": \"Civilian-equivalent Title\", \"company\": \"Military Branch/Unit\", \"location\": \"Base Location\", \"dates\": \"Service Dates\", \"description\": \"A multi-line string with 3-5 bullet points. Each bullet MUST start with '• ' and be a STAR-method-based achievement translated into corporate language.\"}]"
       },
       "skillsToDevelop": ["Essential technical and soft skill to acquire."],
       "networkingSuggestions": ["Specific, tailored networking advice."],
@@ -201,7 +204,7 @@ export const generateTransitionPlan = async (
         2.  **Extract Quantifiable Achievements:** Actively search for and highlight metrics and quantifiable achievements. For example, "Led a team of 15" or "Managed a budget of $500k" or "Improved process efficiency by 20%". These are critical for a civilian resume.
         3.  **Infer Soft Skills:** Go beyond listed skills. Infer soft skills like leadership, strategic planning, problem-solving, and communication from the context of their roles, responsibilities, and accomplishments described in the documents.
         4.  **Military-to-Civilian Translation:** This is a critical task. Translate military-specific jargon, acronyms, ranks, and responsibilities into their closest civilian corporate equivalents. For example, a "Squad Leader" could be a "Team Lead" or "Project Coordinator." An "NCOER" is a "Performance Review." This translation must be reflected in your feedback, especially in the resume feedback and skills analysis sections.
-        5.  **Focus on Impact (STAR Method):** Frame your analysis around the impact of the user's work. For each role, try to identify the Situation, Task, Action, and Result (STAR). What was the outcome of their work? How did it benefit the organization? This is how corporate hiring managers think.
+        5.  **Resume Content Generation:** In the \`suggestedResumeExperience\` field, create 1-2 detailed experience entries based on the user's most significant roles from their documents. Translate their military duties into compelling, civilian-friendly achievements. Use the STAR (Situation, Task, Action, Result) method for crafting bullet points. Quantify achievements whenever possible.
 
         Here is the data provided by the user:
         ${userProvidedData}
@@ -288,4 +291,57 @@ export const generateTransitionPlan = async (
         }
         throw new Error("Failed to communicate with the AI model. Please check your internet connection and try again.");
     }
+};
+
+// --- Chat Functionality ---
+
+let chat: Chat | null = null;
+
+export const startChatSession = (profile: UserProfile, plan: TransitionPlan): void => {
+    // We only need a subset of the plan for context to save tokens
+    const planContext = JSON.stringify({
+        summary: plan.summary,
+        targetRole: profile.targetRole,
+        skillsToDevelop: plan.skillsToDevelop,
+        phases: plan.phases.map(p => ({ title: p.title, objective: p.objective })),
+    }, null, 2);
+    
+    const profileContext = JSON.stringify({
+        targetRole: profile.targetRole,
+        targetLocations: profile.targetLocations,
+    }, null, 2);
+
+    const history = [
+        {
+            role: 'user' as const,
+            parts: [{ text: `
+                Here is my user profile:
+                ${profileContext}
+
+                Here is the transition plan you generated for me:
+                ${planContext}
+
+                Now, act as my AI career advisor. I will ask you follow-up questions about this plan. Keep your answers concise and focused on my questions.
+            `}]
+        },
+        {
+            role: 'model' as const,
+            parts: [{ text: "Understood. I have reviewed your profile and the transition plan. I am ready to answer your questions. What would you like to know?" }]
+        }
+    ];
+
+    chat = ai.chats.create({
+      model: 'gemini-2.5-pro',
+      history: history,
+      config: {
+         systemInstruction: `You are an expert AI career advisor with the specific persona of a senior Hiring Manager for the user's target role. You have already provided the user with a comprehensive transition plan (the context of which has been provided). Your task now is to answer follow-up questions about that plan. Your answers must be concise, helpful, and maintain your persona.`
+      }
+    });
+};
+
+export const continueChatStream = async (message: string) => {
+    if (!chat) {
+        throw new Error("Chat session not initialized. Call startChatSession first.");
+    }
+    return chat.sendMessageStream({ message });
 };

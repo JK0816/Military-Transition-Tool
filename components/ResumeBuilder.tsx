@@ -1,5 +1,5 @@
 import React, { useState, useReducer } from 'react';
-import type { TransitionPlan, UserProfile } from '../types';
+import type { TransitionPlan, UserProfile, AiGeneratedResumeExperience } from '../types';
 import { PencilIcon } from './icons/PencilIcon';
 import { PlusCircleIcon } from './icons/PlusCircleIcon';
 import { TrashIcon } from './icons/TrashIcon';
@@ -162,43 +162,57 @@ interface ResumeBuilderProps {
 
 export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ plan, userProfile }) => {
     
-    const initialState: ResumeState = {
-        name: '[Your Name]',
-        contact: {
-            location: '[City, State, Zip]',
-            phone: '[Phone Number]',
-            email: '[Email Address]',
-            linkedin: '[LinkedIn Profile URL]'
-        },
-        summary: plan.careerTeamFeedback.overallImpression,
-        skills: plan.skillsToDevelop.join(' | '),
-        certifications: plan.certifications.map(c => `${c.name}${c.courseProvider ? ` - ${c.courseProvider}` : ''}`).join('\n'),
-        experience: [
-            {
-                id: Date.now(),
-                title: '[CIVILIAN-EQUIVALENT JOB TITLE]',
-                company: '[Company/Unit Name]',
-                location: '[City, ST]',
-                dates: '[Start Date] – [End Date]',
-                description: `• Bullet point achievement 1. (e.g., Led a team of X personnel to achieve Y, resulting in a Z% improvement in efficiency.)
+    const getInitialState = (): ResumeState => {
+        const assessedSkills = plan.careerTeamFeedback.skillAssessments
+            .filter(s => s.currentLevel >= 5) // Get skills where they are somewhat proficient
+            .map(s => s.skillName);
+        const allSkills = [...new Set([...assessedSkills, ...plan.skillsToDevelop])];
+
+        const suggestedExperience = plan.careerTeamFeedback.suggestedResumeExperience;
+
+        return {
+            name: '[Your Name]',
+            contact: {
+                location: userProfile.targetLocations || '[City, State, Zip]',
+                phone: '[Phone Number]',
+                email: '[Email Address]',
+                linkedin: '[LinkedIn Profile URL]'
+            },
+            summary: plan.careerTeamFeedback.overallImpression || 'AI-generated professional summary based on your profile and target role.',
+            skills: allSkills.join(' | '),
+            certifications: plan.certifications.map(c => `${c.name}${c.courseProvider ? ` - ${c.courseProvider}` : ''}`).join('\n'),
+            experience: suggestedExperience && suggestedExperience.length > 0
+                ? suggestedExperience.map((exp, index) => ({
+                    ...exp,
+                    id: Date.now() + index, // Generate a unique ID for React keys
+                }))
+                : [ // Fallback if AI doesn't provide a structured response
+                    {
+                        id: Date.now(),
+                        title: '[CIVILIAN-EQUIVALENT JOB TITLE]',
+                        company: '[Company/Unit Name]',
+                        location: '[City, ST]',
+                        dates: '[Start Date] – [End Date]',
+                        description: `• Bullet point achievement 1. (e.g., Led a team of X personnel to achieve Y, resulting in a Z% improvement in efficiency.)
 • Bullet point achievement 2. (e.g., Managed and maintained equipment valued at over $X million with 100% accountability.)
 • Bullet point achievement 3. (e.g., Developed and implemented a new training program that increased team proficiency by X%.)
 ---
 AI Suggestion: ${plan.careerTeamFeedback.resumeFeedback}`
-            }
-        ],
-        education: [
-            {
-                id: Date.now(),
-                degree: '[Degree or Field of Study]',
-                school: '[University or Institution Name]',
-                location: '[City, ST]',
-                graduationDate: '[Graduation Year]'
-            }
-        ]
+                    }
+                ],
+            education: [
+                {
+                    id: Date.now(),
+                    degree: '[Degree or Field of Study]',
+                    school: '[University or Institution Name]',
+                    location: '[City, ST]',
+                    graduationDate: '[Graduation Year]'
+                }
+            ]
+        };
     };
 
-    const [state, dispatch] = useReducer(resumeReducer, initialState);
+    const [state, dispatch] = useReducer(resumeReducer, undefined, getInitialState);
 
     return (
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-6 rounded-2xl shadow-xl animate-fade-in">
